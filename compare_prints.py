@@ -13,7 +13,7 @@ def compare_fingers(input_file_path):
         enrolled_features_list = pickle.load(f)
 
     # Process input fingerprint to extract features
-    f1, m1, ls1 = processing_prints.process_and_extract_features(file_path)
+    f1, m1, ls1 = processing_prints.process_and_extract_features(input_file_path)
 
     comparison_scores = []
     best_match_index = None
