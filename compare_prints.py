@@ -7,15 +7,10 @@ import cv2 as cv
 import matplotlib.pyplot as plt
 from utils import *
 
-def compare_fingers(input_file_path):
-    # Load enrolled features from the pickle file
-    with open('enrolled_features.pickle', 'rb') as f:
-        enrolled_features_list = pickle.load(f)
-
-    # Process input fingerprint to extract features
+def compare_fingers(input_file_path, enrolled_features_list):
+   # Process input fingerprint to extract features
     f1, m1, ls1 = processing_prints.process_and_extract_features(input_file_path)
 
-    comparison_scores = []
     best_match_index = None
     best_score = -float('inf')
 
@@ -26,23 +21,25 @@ def compare_fingers(input_file_path):
         m2 = enrolled_features['valid_minutiae']
         ls2 = enrolled_features['local_structures']
 
-        # Compute comparison score between ls1 and ls2
-        # For example, compute the mean absolute error or any other similarity/distance metric
-        score = np.mean(np.abs(ls1 - ls2))
+        # Resize ls1 to match the shape of ls2
+        #ls1_resized = cv.resize(ls1, (ls2.shape[1], ls2.shape[0]))
+        
+        dists = np.linalg.norm(ls1[:,np.newaxis,:] - ls2, axis = -1)
+        dists /= np.linalg.norm(ls1, axis = 1)[:,np.newaxis] + np.linalg.norm(ls2, axis = 1) # Normalize as in eq. (17) of MCC paper
+        
+        # Select the num_p pairs with the smallest distances (LSS technique)
+        num_p = 5 # For simplicity: a fixed number of pairs
+        pairs = np.unravel_index(np.argpartition(dists, num_p, None)[:num_p], dists.shape)
+        score = 1 - np.mean(dists[pairs[0], pairs[1]])
 
         # Update best match if needed
         if score > best_score:
             best_match_index = idx
             best_score = score
 
-        # Append the comparison score to the list
-        comparison_scores.append(score)
-
-    # Calculate the overall comparison score as the average of all individual scores
-    overall_score = np.mean(comparison_scores)
-
-    # Print out the best match index, score, and filename of the best match
+   # Print out the best match score, and filename of the best match
     best_match_features = enrolled_features_list[best_match_index]
-    print(f"Best match index: {best_match_index}")
     print(f"Best match score: {best_score}")
     print(f"Filename of the best match: {best_match_features['filename']}")
+    return best_score
+
